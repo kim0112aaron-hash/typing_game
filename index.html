@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한글 타자 게임 - Cyber Typing Master 10</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #080711;
+            color: #e2e8f0;
+            overflow: hidden;
+            user-select: none;
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .neon-text-blue {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.7), 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+        .neon-text-pink {
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.7), 0 0 20px rgba(244, 63, 94, 0.4);
+        }
+        .neon-text-purple {
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.7), 0 0 20px rgba(168, 85, 247, 0.4);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(168, 85, 247, 0.5);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(168, 85, 247, 0.8);
+        }
+    </style>
+</head>
+<body class="w-screen h-screen relative flex flex-col justify-between items-center overflow-hidden">
+
+    <!-- Canvas for background & game effects -->
+    <canvas id="bgCanvas" class="absolute inset-0 z-0 pointer-events-none"></canvas>
+    <canvas id="gameCanvas" class="absolute inset-0 z-10 pointer-events-none"></canvas>
+
+    <!-- Main App Container -->
+    <div id="app" class="relative z-20 w-full h-full flex flex-col justify-between max-w-6xl mx-auto p-3 md:p-6">
+
+        <!-- Header Controls (Visible during gameplay) -->
+        <header id="gameHeader" class="hidden flex justify-between items-center glass-panel p-3 sm:p-4 rounded-2xl border border-purple-500/30 shadow-lg">
+            <div class="flex items-center space-x-3 sm:space-x-6">
+                <div>
+                    <span class="text-[10px] sm:text-xs text-purple-400 block font-bold uppercase tracking-wider">난이도</span>
+                    <span id="displayDifficulty" class="text-sm sm:text-lg font-black text-cyan-400">1단계</span>
+                </div>
+                <div>
+                    <span class="text-[10px] sm:text-xs text-purple-400 block font-bold uppercase tracking-wider">점수</span>
+                    <span id="displayScore" class="text-lg sm:text-2xl font-black font-orbitron text-yellow-400 neon-text-blue">0</span>
+                </div>
+                <div>
+                    <span class="text-[10px] sm:text-xs text-purple-400 block font-bold uppercase tracking-wider">콤보</span>
+                    <span id="displayCombo" class="text-sm sm:text-lg font-bold font-orbitron text-pink-400">0x</span>
+                </div>
+            </div>
+
+            <!-- Health Bar / Hearts -->
+            <div class="flex items-center space-x-1.5 sm:space-x-2">
+                <span class="text-xs text-purple-400 font-bold uppercase tracking-wider mr-1 hidden sm:inline">체력</span>
+                <div id="livesContainer" class="flex space-x-1 text-base sm:text-xl text-rose-500">
+                    <!-- Dynamic Hearts -->
+                </div>
+            </div>
+
+            <!-- Action Buttons & Audio Controls -->
+            <div class="flex items-center space-x-1.5 sm:space-x-2">
+                <!-- Volume Slider Control -->
+                <div class="hidden md:flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+                    <i class="fa-solid fa-volume-low text-xs text-purple-300"></i>
+                    <input type="range" id="volumeSliderHeader" min="0" max="1" step="0.05" value="0.7" class="w-16 accent-purple-400 bg-slate-700 h-1 rounded cursor-pointer">
+                </div>
+
+                <button id="btnMute" class="p-2 sm:p-2.5 px-2.5 sm:px-3 bg-slate-800/60 hover:bg-slate-700/80 border border-slate-600/50 rounded-xl transition text-xs sm:text-sm font-semibold flex items-center justify-center text-purple-300">
+                    <i id="muteIcon" class="fa-solid fa-volume-high"></i>
+                </button>
+                <button id="btnPause" class="p-2 sm:p-2.5 px-3 sm:px-4 bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/50 rounded-xl transition text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+                    <i class="fa-solid fa-pause"></i> <span class="hidden sm:inline">일시정지</span>
+                </button>
+                <button id="btnHome" class="p-2 sm:p-2.5 px-3 sm:px-4 bg-slate-800/60 hover:bg-slate-700/80 border border-slate-600/50 rounded-xl transition text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+                    <i class="fa-solid fa-house"></i> <span class="hidden sm:inline">홈으로</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Screen -->
+        <main class="flex-1 flex items-center justify-center relative my-2 sm:my-4">
+            
+            <!-- 1. Home / Start Screen -->
+            <div id="screenHome" class="w-full max-w-xl glass-panel p-5 sm:p-7 rounded-3xl text-center border border-purple-500/40 shadow-2xl flex flex-col items-center space-y-4 max-h-[92vh] overflow-y-auto">
+                <div class="space-y-1">
+                    <h1 class="text-2xl sm:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500 neon-text-purple">
+                        한글 타자 게임
+                    </h1>
+                    <p class="text-[11px] sm:text-xs text-slate-400">10단계 세분화 사이버 사운드 타자 챌린지</p>
+                </div>
+
+                <!-- Difficulty Selector (10 Levels Grid) -->
+                <div class="w-full space-y-1.5 text-left">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-bold text-purple-300 uppercase tracking-wider">난이도 선택 (1 ~ 10단계)</label>
+                        <span id="selectedDiffLabel" class="text-xs font-bold text-cyan-400">1단계 (기초 1글자)</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-1.5" id="difficultyGroup">
+                        <button data-level="1" class="diff-btn py-2 rounded-xl border border-cyan-500/50 bg-cyan-900/30 text-cyan-300 font-bold text-xs hover:bg-cyan-500/20 active-diff transition">1단계<br><span class="text-[9px] font-normal opacity-80">입문</span></button>
+                        <button data-level="2" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition">2단계<br><span class="text-[9px] font-normal opacity-80">초급 1</span></button>
+                        <button data-level="3" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition">3단계<br><span class="text-[9px] font-normal opacity-80">초급 2</span></button>
+                        <button data-level="4" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition">4단계<br><span class="text-[9px] font-normal opacity-80">중급 1</span></button>
+                        <button data-level="5" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition">5단계<br><span class="text-[9px] font-normal opacity-80">중급 2</span></button>
+                        <button data-level="6" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition">6단계<br><span class="text-[9px] font-normal opacity-80">상급 1</span></button>
+                        <button data-level="7" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition">7단계<br><span class="text-[9px] font-normal opacity-80">상급 2</span></button>
+                        <button data-level="8" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition">8단계<br><span class="text-[9px] font-normal opacity-80">고급 1</span></button>
+                        <button data-level="9" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition">9단계<br><span class="text-[9px] font-normal opacity-80">고급 2</span></button>
+                        <button data-level="10" class="diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-rose-400 font-bold text-xs hover:bg-slate-700/50 transition">10단계<br><span class="text-[9px] font-normal opacity-80">극악</span></button>
+                    </div>
+                </div>
+
+                <!-- Speed Preset & Volume Slider Controls -->
+                <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
+                    <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-gauge-high text-cyan-400"></i> 떨어지는 속도
+                            </span>
+                            <span id="speedPresetLabel" class="text-xs font-bold text-cyan-400">보통 (1.0x)</span>
+                        </div>
+                        <input type="range" id="speedSlider" min="0.6" max="1.4" step="0.2" value="1.0" class="w-full accent-purple-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+                    </div>
+
+                    <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-volume-high text-pink-400"></i> 마스터 효과음 음량
+                            </span>
+                            <span id="volumeLabel" class="text-xs font-bold text-pink-400">70%</span>
+                        </div>
+                        <input type="range" id="volumeSliderHome" min="0" max="1" step="0.05" value="0.7" class="w-full accent-pink-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Game Mode Info -->
+                <div class="w-full bg-slate-900/60 p-3 rounded-2xl border border-slate-800 text-xs text-slate-300 text-left space-y-1">
+                    <div class="flex items-center text-purple-400 font-bold mb-0.5">
+                        <i class="fa-solid fa-circle-info mr-1.5"></i> 단계 설명
+                    </div>
+                    <p id="diffDescription" class="text-slate-400 text-[11px] leading-relaxed">
+                        1단계: 한글 1글자 낱말이 천천히 내려옵니다. 초보자 타자 자리 익히기에 좋습니다.
+                    </p>
+                </div>
+
+                <!-- Main Actions -->
+                <div class="w-full space-y-2 pt-1">
+                    <button id="btnStartGame" class="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-base shadow-lg shadow-purple-600/30 transition transform hover:-translate-y-0.5 active:translate-y-0">
+                        <i class="fa-solid fa-play mr-2"></i>게임 시작하기
+                    </button>
+                    <button id="btnOpenLeaderboard" class="w-full py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-purple-300 font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trophy text-yellow-400"></i> 🏆 랭킹 보기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Leaderboard Modal Screen -->
+            <div id="screenLeaderboard" class="hidden w-full max-w-2xl glass-panel p-5 sm:p-7 rounded-3xl border border-purple-500/40 shadow-2xl flex flex-col space-y-4 max-h-[88vh]">
+                <div class="flex justify-between items-center border-b border-slate-700/80 pb-3">
+                    <h2 class="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-500 flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-yellow-400"></i> 명예의 전당 (랭킹)
+                    </h2>
+                    <button id="btnCloseLeaderboard" class="text-slate-400 hover:text-white text-xl p-1">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Leaderboard Level Tabs (1-10) -->
+                <div class="grid grid-cols-5 gap-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 text-xs font-bold" id="rankTabsContainer">
+                    <!-- Dynamic Rank Tabs 1 to 10 -->
+                </div>
+
+                <!-- Rank List Table -->
+                <div class="flex-1 overflow-y-auto pr-1">
+                    <table class="w-full text-left text-xs sm:text-sm">
+                        <thead class="text-purple-300 border-b border-slate-800 sticky top-0 bg-slate-900/90 py-2">
+                            <tr>
+                                <th class="py-2 px-2.5">순위</th>
+                                <th class="py-2 px-2.5">닉네임</th>
+                                <th class="py-2 px-2.5 text-right">점수</th>
+                                <th class="py-2 px-2.5 text-right hidden sm:table-cell">정확도</th>
+                                <th class="py-2 px-2.5 text-right hidden sm:table-cell">최고 콤보</th>
+                                <th class="py-2 px-2.5 text-right">날짜</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardBody" class="divide-y divide-slate-800/50 text-slate-200">
+                            <!-- Dynamic Leaderboard Data -->
+                        </tbody>
+                    </table>
+                    <div id="noRankNotice" class="hidden text-center py-8 text-slate-500 text-xs sm:text-sm">
+                        아직 등록된 기록이 없습니다. 첫 번째 주인공이 되어보세요!
+                    </div>
+                </div>
+
+                <!-- Leaderboard Footer Controls -->
+                <div class="flex justify-between items-center pt-2 border-t border-slate-800 text-[11px]">
+                    <button id="btnClearLeaderboard" class="text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 transition">
+                        <i class="fa-solid fa-trash-can"></i> 랭킹 초기화
+                    </button>
+                    <span class="text-slate-500">각 단계별 상위 10위까지 보관됩니다.</span>
+                </div>
+            </div>
+
+            <!-- 3. Pause Modal Screen -->
+            <div id="screenPause" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md">
+                <div class="glass-panel p-7 rounded-3xl max-w-sm w-full text-center border border-purple-500/40 shadow-2xl space-y-5">
+                    <h3 class="text-3xl font-black text-cyan-400 neon-text-blue">일시정지</h3>
+                    <p class="text-xs text-slate-300">잠시 휴식 중입니다. 준비가 되면 계속하세요.</p>
+                    <div class="space-y-2.5 pt-1">
+                        <button id="btnResume" class="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition shadow-lg shadow-purple-600/30">
+                            <i class="fa-solid fa-play mr-2"></i>계속하기
+                        </button>
+                        <button id="btnPauseHome" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition border border-slate-700">
+                            <i class="fa-solid fa-house mr-2"></i>메인 화면으로
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Game Over Screen -->
+            <div id="screenGameOver" class="hidden w-full max-w-md glass-panel p-6 sm:p-7 rounded-3xl text-center border border-rose-500/40 shadow-2xl flex flex-col space-y-5">
+                <div class="space-y-1">
+                    <h2 class="text-3xl sm:text-4xl font-black text-rose-500 neon-text-pink">GAME OVER</h2>
+                    <p class="text-xs text-slate-400">모든 체력을 소진하였습니다!</p>
+                </div>
+
+                <!-- Final Stats Card -->
+                <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-2.5 text-left">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                        <span class="text-slate-400 text-xs">최종 점수</span>
+                        <span id="finalScore" class="text-xl sm:text-2xl font-black font-orbitron text-yellow-400">0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-300">
+                        <span>난이도</span>
+                        <span id="finalDiff" class="font-bold text-cyan-400">1단계</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-300">
+                        <span>타격 정확도</span>
+                        <span id="finalAccuracy" class="font-bold text-purple-400">100%</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-300">
+                        <span>최고 콤보</span>
+                        <span id="finalCombo" class="font-bold text-pink-400">0x</span>
+                    </div>
+                </div>
+
+                <!-- Rank Qualification Section -->
+                <div id="rankSubmitContainer" class="space-y-2 text-left bg-purple-950/30 p-3.5 rounded-2xl border border-purple-500/30">
+                    <div class="flex items-center text-xs font-bold text-yellow-400 gap-1.5">
+                        <i class="fa-solid fa-award text-sm"></i>
+                        <span id="rankNoticeText">축하합니다! 랭킹 순위권 진입 가능!</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label for="nicknameInput" class="text-[10px] text-slate-300">닉네임을 입력하세요 (최대 8자)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="nicknameInput" maxlength="8" placeholder="타자왕" class="flex-1 bg-slate-900 border border-purple-500/50 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-400">
+                            <button id="btnSaveScore" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition shadow-md shadow-purple-600/30">
+                                등록
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="grid grid-cols-2 gap-2.5 pt-0.5">
+                    <button id="btnRestartGame" class="py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs sm:text-sm transition">
+                        <i class="fa-solid fa-rotate-right mr-1.5"></i>다시하기
+                    </button>
+                    <button id="btnGameOverHome" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs sm:text-sm transition border border-slate-700">
+                        <i class="fa-solid fa-house mr-1.5"></i>홈으로
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Bottom Input Bar (Visible during gameplay) -->
+        <footer id="gameFooter" class="hidden w-full max-w-xl mx-auto mb-2">
+            <div class="relative flex items-center">
+                <input type="text" id="typingInput" placeholder="단어를 입력하고 Enter를 누르세요..." autocomplete="off" autocorrect="off" spellcheck="false" class="w-full py-3 px-5 rounded-2xl glass-panel border-2 border-purple-500/60 focus:border-cyan-400 text-white text-base sm:text-lg font-bold placeholder-slate-500 shadow-2xl focus:outline-none transition">
+                <div class="absolute right-4 text-[10px] font-bold text-purple-400 uppercase tracking-widest pointer-events-none hidden sm:block">
+                    ENTER ↵
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Custom Toast Alert -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 hidden bg-slate-800 text-white px-4 py-2.5 rounded-2xl border border-purple-500/40 shadow-xl text-xs font-semibold flex items-center gap-2 transition">
+        <i id="toastIcon" class="fa-solid fa-circle-info text-cyan-400"></i>
+        <span id="toastMsg">메시지 내용</span>
+    </div>
+
+    <!-- Main Logic Script -->
+    <script>
+        // --- Word Database across 10 levels ---
+        const WORD_DATABASE = {
+            1: ["가", "나", "다", "라", "마", "바", "사", "아", "자", "차", "카", "타", "파", "하", "불", "물", "달", "별", "해", "꿈"],
+            2: ["하늘", "바다", "구름", "나무", "꽃잎", "바람", "파도", "사랑", "행복", "평화", "우주", "노래", "그림", "친구", "가족", "소망", "햇살", "봄날", "기쁨", "소나무"],
+            3: ["강아지", "고양이", "비행기", "자동차", "자전거", "무지개", "해바라기", "은하수", "컴퓨터", "스마트폰", "도서관", "운동장", "피아노", "스케이트", "선풍기"],
+            4: ["대한민국", "인공지능", "우주탐사", "네트워크", "알고리즘", "메타버스", "블록체인", "소프트웨어", "텔레비전", "프로그래밍", "전자오락", "네온사인", "가상현실"],
+            5: ["고진감래", "대기만성", "동문서답", "박학다식", "역지사지", "유구무언", "이심전심", "일석이조", "자포자기", "천고마비", "탁상공론", "함흥차사", "화사첨족", "권선징악"],
+            6: ["양자컴퓨팅", "머신러닝", "클라우드", "데이터베이스", "사이버보안", "디지털트윈", "지능형로봇", "자율주행차", "생성형모델", "반도체공학"],
+            7: ["아는 것이 힘이다", "티끌 모아 태산이다", "우물 안 개구리", "등잔 밑이 어둡다", "소 잃고 외양간 고친다", "돌다리도 두들겨라", "원숭이도 떨어진다"],
+            8: ["가는 말이 고와야 오는 말이 곱다", "웃는 얼굴에 침 못 뱉는다", "호랑이도 제 말 하면 온다", "공든 탑이 무너지랴", "세 살 버릇 여든까지 가신다"],
+            9: ["개천에서 용 난다고 하였다", "지성이면 감천이라는 말이 있다", "시작이 반이라는 마음으로 임해라", "실패는 성공의 어머니일 뿐이다", "고생 끝에 즐거움이 찾아오는 법"],
+            10: ["뛰는 놈 위에 나는 놈 있다는 것을 명심하라", "지혜로운 자는 위험을 미리 예측하고 대처한다", "시간은 누구에게나 평등하게 주어진 자산이다", "꿈을 이루고자 하는 열정이 운명을 개척한다"]
+        };
+
+        const DIFF_TEXTS = {
+            1: "1단계 (입문)",
+            2: "2단계 (초급1)",
+            3: "3단계 (초급2)",
+            4: "4단계 (중급1)",
+            5: "5단계 (중급2)",
+            6: "6단계 (상급1)",
+            7: "7단계 (상급2)",
+            8: "8단계 (고급1)",
+            9: "9단계 (고급2)",
+            10: "10단계 (극악)"
+        };
+
+        const DIFF_DESCS = {
+            1: "1단계: 한글 1글자 낱말이 매우 천천히 내려옵니다. 키보드 자리를 익히기 좋습니다.",
+            2: "2단계: 쉬운 2글자 단어가 내려옵니다. 기본 타자 속도를 다지기 적합합니다.",
+            3: "3단계: 일상적인 3글자 이상 단어가 등장합니다. 안정적인 입력이 필요합니다.",
+            4: "4단계: 4글자 IT 단어 및 일반 어휘가 내려옵니다. 연속 입력 연습에 좋습니다.",
+            5: "5단계: 4글자 사자성어가 출제됩니다. 어휘력과 순발력을 시험해보세요.",
+            6: "6단계: 기술 및 학술 전문 단어가 떨어집니다. 빠르고 정확하게 입력해야 합니다.",
+            7: "7단계: 짧은 속담 및 명언 문구가 나타납니다. 문장 타자 연습에 들어갑니다.",
+            8: "8단계: 중간 길이의 속담 문장이 내려옵니다. 정확성이 중요해집니다.",
+            9: "9단계: 긴 속담과 명언 문장이 떨어집니다. 한 번의 오타도 치명적일 수 있습니다.",
+            10: "10단계: 최고 난이도의 긴 문장들이 빠르게 내려옵니다. 마스터의 자리에 도전하세요!"
+        };
+
+        // --- Rich Web Audio API Synthesizer Engine ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.masterVolume = 0.7;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            setVolume(val) {
+                this.masterVolume = Math.max(0, Math.min(1, parseFloat(val)));
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            // 1) Multi-letter Typing Keypress Click
+            playKeypress() {
+                if (!this.ctx || this.muted || this.masterVolume <= 0) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                // Slight frequency randomization for natural mechanical click feeling
+                const baseFreq = 1200 + Math.random() * 300;
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.03);
+
+                gain.gain.setValueAtTime(0.08 * this.masterVolume, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.03);
+            }
+
+            // 2) Correct Word Pop (Multi-pitch Synthesized Chord Chime)
+            playCorrect() {
+                if (!this.ctx || this.muted || this.masterVolume <= 0) return;
+                const now = this.ctx.currentTime;
+
+                // Major triad chord pitches (C5, E5, G5, C6)
+                const frequencies = [523.25, 659.25, 783.99, 1046.50];
+
+                frequencies.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.02);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 1.05, now + idx * 0.02 + 0.12);
+
+                    gain.gain.setValueAtTime(0.12 * this.masterVolume, now + idx * 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.02 + 0.18);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.02);
+                    osc.stop(now + idx * 0.02 + 0.18);
+                });
+            }
+
+            // 3) Ascending Combo Streak Arpeggio (Pitch shifts higher with combo count)
+            playComboStreak(comboCount) {
+                if (!this.ctx || this.muted || this.masterVolume <= 0) return;
+                const now = this.ctx.currentTime;
+
+                // Base transpose scale determined by combo thresholds (5x, 10x, 15x, 20x, 25x+)
+                let tier = Math.min(5, Math.floor(comboCount / 5));
+                const rootFreqs = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00];
+                const root = rootFreqs[tier] || 880.00;
+
+                // Arpeggio pattern (Root -> Major 3rd -> 5th -> Octave)
+                const offsets = [1.0, 1.25, 1.5, 2.0];
+
+                offsets.forEach((ratio, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(root * ratio, now + i * 0.04);
+
+                    gain.gain.setValueAtTime(0.15 * this.masterVolume, now + i * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.15);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.04);
+                    osc.stop(now + i * 0.04 + 0.15);
+                });
+            }
+
+            // 4) Combo Break / Miss Warning Tone (Dissonant descending buzz)
+            playMiss() {
+                if (!this.ctx || this.muted || this.masterVolume <= 0) return;
+                const now = this.ctx.currentTime;
+
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                // Dissonant interval (Low C + Low C#)
+                osc1.type = 'sawtooth';
+                osc2.type = 'sawtooth';
+
+                osc1.frequency.setValueAtTime(180, now);
+                osc1.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+
+                osc2.frequency.setValueAtTime(191, now);
+                osc2.frequency.exponentialRampToValueAtTime(85, now + 0.25);
+
+                gain.gain.setValueAtTime(0.18 * this.masterVolume, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.25);
+                osc2.stop(now + 0.25);
+            }
+
+            // 5) Game Over Fanfare / Defeat Sound
+            playGameOver() {
+                if (!this.ctx || this.muted || this.masterVolume <= 0) return;
+                const now = this.ctx.currentTime;
+
+                const notes = [220, 207.65, 196, 174.61]; // A3 -> G#3 -> G3 -> F3
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+
+                    gain.gain.setValueAtTime(0.2 * this.masterVolume, now + idx * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.22);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + idx * 0.15);
+                    osc.stop(now + idx * 0.15 + 0.22);
+                });
+            }
+
+            // 6) Stage Clear / Level Up Fanfare
+            playStageClear() {
+                if (!this.ctx || this.muted || this.masterVolume <= 0) return;
+                const now = this.ctx.currentTime;
+
+                const fanfare = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5 -> E5 -> G5 -> C6 -> E6
+                fanfare.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+                    const duration = idx === fanfare.length - 1 ? 0.35 : 0.12;
+                    gain.gain.setValueAtTime(0.12 * this.masterVolume, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + duration);
+                });
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // --- Game State Variables ---
+        let currentDifficulty = 1;
+        let speedMultiplier = 1.0;
+        let score = 0;
+        let lives = 5;
+        let maxLives = 5;
+        let combo = 0;
+        let maxCombo = 0;
+        let totalTyped = 0;
+        let correctTyped = 0;
+
+        let activeWords = [];
+        let particles = [];
+        let floatingTexts = [];
+        let starfield = [];
+
+        let isPlaying = false;
+        let isPaused = false;
+        let lastSpawnTime = 0;
+        let spawnInterval = 3200;
+        let baseSpeed = 0.5;
+
+        let bgCanvas, bgCtx, gameCanvas, gameCtx;
+        let animFrameId = null;
+
+        // --- Init ---
+        window.onload = function() {
+            initCanvases();
+            initStarfield();
+            renderRankTabs();
+            bindEvents();
+            updateLivesUI();
+            animateBackground();
+        };
+
+        function initCanvases() {
+            bgCanvas = document.getElementById('bgCanvas');
+            bgCtx = bgCanvas.getContext('2d');
+            gameCanvas = document.getElementById('gameCanvas');
+            gameCtx = gameCanvas.getContext('2d');
+            resizeCanvases();
+            window.addEventListener('resize', resizeCanvases);
+        }
+
+        function resizeCanvases() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+            gameCanvas.width = window.innerWidth;
+            gameCanvas.height = window.innerHeight;
+        }
+
+        function initStarfield() {
+            starfield = [];
+            const starCount = Math.floor((window.innerWidth * window.innerHeight) / 7000);
+            for (let i = 0; i < starCount; i++) {
+                starfield.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    size: Math.random() * 2 + 0.5,
+                    speed: Math.random() * 0.4 + 0.1,
+                    alpha: Math.random(),
+                    color: Math.random() > 0.5 ? '#a855f7' : '#38bdf8'
+                });
+            }
+        }
+
+        function animateBackground() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+            bgCtx.strokeStyle = 'rgba(168, 85, 247, 0.04)';
+            bgCtx.lineWidth = 1;
+            const gridSize = 40;
+            for (let x = 0; x < bgCanvas.width; x += gridSize) {
+                bgCtx.beginPath();
+                bgCtx.moveTo(x, 0);
+                bgCtx.lineTo(x, bgCanvas.height);
+                bgCtx.stroke();
+            }
+            for (let y = 0; y < bgCanvas.height; y += gridSize) {
+                bgCtx.beginPath();
+                bgCtx.moveTo(0, y);
+                bgCtx.lineTo(bgCanvas.width, y);
+                bgCtx.stroke();
+            }
+
+            starfield.forEach(star => {
+                star.y += star.speed;
+                if (star.y > bgCanvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * bgCanvas.width;
+                }
+                bgCtx.save();
+                bgCtx.globalAlpha = star.alpha;
+                bgCtx.fillStyle = star.color;
+                bgCtx.beginPath();
+                bgCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                bgCtx.fill();
+                bgCtx.restore();
+            });
+
+            requestAnimationFrame(animateBackground);
+        }
+
+        function renderRankTabs() {
+            const container = document.getElementById('rankTabsContainer');
+            container.innerHTML = '';
+            for (let i = 1; i <= 10; i++) {
+                const btn = document.createElement('button');
+                btn.setAttribute('data-tab', i);
+                btn.className = `rank-tab py-1.5 rounded-lg text-[11px] text-slate-400 hover:text-white transition ${i === 1 ? 'bg-purple-600 text-white font-bold' : ''}`;
+                btn.innerText = `${i}단계`;
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.rank-tab').forEach(t => {
+                        t.classList.remove('bg-purple-600', 'text-white', 'font-bold');
+                        t.classList.add('text-slate-400');
+                    });
+                    btn.classList.add('bg-purple-600', 'text-white', 'font-bold');
+                    btn.classList.remove('text-slate-400');
+                    renderLeaderboardTable(i);
+                });
+                container.appendChild(btn);
+            }
+        }
+
+        function bindEvents() {
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const level = parseInt(btn.getAttribute('data-level'));
+                    selectDifficulty(level);
+                });
+            });
+
+            const speedSlider = document.getElementById('speedSlider');
+            const speedLabel = document.getElementById('speedPresetLabel');
+            speedSlider.addEventListener('input', (e) => {
+                speedMultiplier = parseFloat(e.target.value);
+                if (speedMultiplier <= 0.6) speedLabel.innerText = "매우 느리게 (0.6x)";
+                else if (speedMultiplier <= 0.8) speedLabel.innerText = "느리게 (0.8x)";
+                else if (speedMultiplier === 1.0) speedLabel.innerText = "보통 (1.0x)";
+                else if (speedMultiplier <= 1.2) speedLabel.innerText = "조금 빠르게 (1.2x)";
+                else speedLabel.innerText = "빠르게 (1.4x)";
+            });
+
+            // Volume Controls Synchronization
+            const volHome = document.getElementById('volumeSliderHome');
+            const volHeader = document.getElementById('volumeSliderHeader');
+            const volLabel = document.getElementById('volumeLabel');
+
+            const syncVolume = (val) => {
+                sound.setVolume(val);
+                volHome.value = val;
+                volHeader.value = val;
+                volLabel.innerText = `${Math.round(val * 100)}%`;
+            };
+
+            volHome.addEventListener('input', (e) => syncVolume(e.target.value));
+            volHeader.addEventListener('input', (e) => syncVolume(e.target.value));
+
+            document.getElementById('btnStartGame').addEventListener('click', () => {
+                sound.init();
+                sound.playStageClear();
+                startGame();
+            });
+
+            document.getElementById('btnMute').addEventListener('click', () => {
+                const isMuted = sound.toggleMute();
+                const icon = document.getElementById('muteIcon');
+                icon.className = isMuted ? 'fa-solid fa-volume-xmark text-rose-400' : 'fa-solid fa-volume-high text-purple-300';
+            });
+
+            document.getElementById('btnPause').addEventListener('click', togglePause);
+            document.getElementById('btnResume').addEventListener('click', togglePause);
+            
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isPlaying) {
+                    togglePause();
+                }
+            });
+
+            document.getElementById('btnHome').addEventListener('click', returnHome);
+            document.getElementById('btnPauseHome').addEventListener('click', returnHome);
+            document.getElementById('btnGameOverHome').addEventListener('click', returnHome);
+            document.getElementById('btnRestartGame').addEventListener('click', () => {
+                sound.playStageClear();
+                startGame();
+            });
+
+            document.getElementById('btnOpenLeaderboard').addEventListener('click', openLeaderboard);
+            document.getElementById('btnCloseLeaderboard').addEventListener('click', closeLeaderboard);
+            document.getElementById('btnClearLeaderboard').addEventListener('click', clearLeaderboardData);
+
+            document.getElementById('btnSaveScore').addEventListener('click', submitScore);
+            document.getElementById('nicknameInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') submitScore();
+            });
+
+            const inputEl = document.getElementById('typingInput');
+            
+            // Keypress Sound Trigger
+            inputEl.addEventListener('input', (e) => {
+                if (isPlaying && !isPaused && e.inputType !== 'deleteContentBackward') {
+                    sound.playKeypress();
+                }
+            });
+
+            inputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && isPlaying && !isPaused) {
+                    const text = inputEl.value.trim();
+                    if (text) {
+                        checkTypedWord(text);
+                    }
+                    inputEl.value = '';
+                }
+            });
+        }
+
+        function selectDifficulty(level) {
+            currentDifficulty = level;
+            sound.init();
+            sound.playKeypress();
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                const bLevel = parseInt(btn.getAttribute('data-level'));
+                if (bLevel === level) {
+                    btn.className = "diff-btn py-2 rounded-xl border border-cyan-500/50 bg-cyan-900/30 text-cyan-300 font-bold text-xs hover:bg-cyan-500/20 active-diff transition";
+                } else {
+                    btn.className = "diff-btn py-2 rounded-xl border border-slate-700 bg-slate-800/40 text-slate-300 font-bold text-xs hover:bg-slate-700/50 transition";
+                }
+            });
+            document.getElementById('selectedDiffLabel').innerText = `${level}단계 (${DIFF_TEXTS[level].split(" ")[1]})`;
+            document.getElementById('diffDescription').innerText = DIFF_DESCS[level];
+        }
+
+        function startGame() {
+            score = 0;
+            lives = maxLives;
+            combo = 0;
+            maxCombo = 0;
+            totalTyped = 0;
+            correctTyped = 0;
+            activeWords = [];
+            particles = [];
+            floatingTexts = [];
+            isPlaying = true;
+            isPaused = false;
+
+            // 10 Level Speed Balance
+            const speedTable = {
+                1: 0.4, 2: 0.6, 3: 0.8, 4: 1.0, 5: 1.2,
+                6: 1.4, 7: 1.6, 8: 1.8, 9: 2.0, 10: 2.3
+            };
+            const spawnTable = {
+                1: 3500, 2: 3100, 3: 2800, 4: 2500, 5: 2300,
+                6: 2100, 7: 1900, 8: 1800, 9: 1700, 10: 1600
+            };
+
+            baseSpeed = speedTable[currentDifficulty] * speedMultiplier;
+            spawnInterval = spawnTable[currentDifficulty];
+
+            document.getElementById('displayDifficulty').innerText = `${currentDifficulty}단계`;
+            document.getElementById('displayScore').innerText = '0';
+            document.getElementById('displayCombo').innerText = '0x';
+            updateLivesUI();
+
+            document.getElementById('screenHome').classList.add('hidden');
+            document.getElementById('screenGameOver').classList.add('hidden');
+            document.getElementById('screenLeaderboard').classList.add('hidden');
+            document.getElementById('screenPause').classList.add('hidden');
+
+            document.getElementById('gameHeader').classList.remove('hidden');
+            document.getElementById('gameFooter').classList.remove('hidden');
+
+            const inputEl = document.getElementById('typingInput');
+            inputEl.value = '';
+            inputEl.focus();
+
+            lastSpawnTime = performance.now();
+
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(timestamp) {
+            if (!isPlaying) return;
+
+            if (!isPaused) {
+                gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+                if (timestamp - lastSpawnTime > spawnInterval) {
+                    spawnWord();
+                    lastSpawnTime = timestamp;
+                }
+
+                updateAndDrawWords();
+                updateAndDrawParticles();
+                updateAndDrawFloatingTexts();
+            }
+
+            animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function spawnWord() {
+            const list = WORD_DATABASE[currentDifficulty] || WORD_DATABASE[1];
+            const text = list[Math.floor(Math.random() * list.length)];
+
+            const margin = 160;
+            const x = margin + Math.random() * Math.max(200, gameCanvas.width - margin * 2);
+            const speed = baseSpeed + (Math.random() * 0.1 - 0.05);
+
+            activeWords.push({
+                text: text,
+                x: x,
+                y: 60,
+                speed: Math.max(0.3, speed)
+            });
+        }
+
+        function updateAndDrawWords() {
+            const bottomBoundary = gameCanvas.height - 110;
+
+            for (let i = activeWords.length - 1; i >= 0; i--) {
+                const w = activeWords[i];
+                w.y += w.speed;
+
+                gameCtx.save();
+                gameCtx.font = "bold 16px 'Noto Sans KR', sans-serif";
+                const textWidth = gameCtx.measureText(w.text).width;
+                const padX = 16;
+
+                const rx = w.x - textWidth / 2 - padX;
+                const ry = w.y - 18;
+                const rw = textWidth + padX * 2;
+                const rh = 34;
+
+                gameCtx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+                gameCtx.strokeStyle = 'rgba(168, 85, 247, 0.6)';
+                gameCtx.lineWidth = 2;
+
+                gameCtx.beginPath();
+                gameCtx.roundRect(rx, ry, rw, rh, 10);
+                gameCtx.fill();
+                gameCtx.stroke();
+
+                gameCtx.fillStyle = '#ffffff';
+                gameCtx.textAlign = 'center';
+                gameCtx.textBaseline = 'middle';
+                gameCtx.shadowColor = '#a855f7';
+                gameCtx.shadowBlur = 6;
+                gameCtx.fillText(w.text, w.x, w.y);
+                gameCtx.restore();
+
+                if (w.y >= bottomBoundary) {
+                    activeWords.splice(i, 1);
+                    handleMiss();
+                }
+            }
+        }
+
+        function checkTypedWord(typedText) {
+            totalTyped++;
+            let matchIndex = -1;
+
+            let maxY = -1;
+            for (let i = 0; i < activeWords.length; i++) {
+                if (activeWords[i].text === typedText && activeWords[i].y > maxY) {
+                    maxY = activeWords[i].y;
+                    matchIndex = i;
+                }
+            }
+
+            if (matchIndex !== -1) {
+                correctTyped++;
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+
+                const matched = activeWords[matchIndex];
+                
+                const basePoints = typedText.length * 25;
+                const comboBonus = Math.floor(combo * 5);
+                const gainedScore = (basePoints + comboBonus) * currentDifficulty;
+                score += gainedScore;
+
+                addFloatingText(`+${gainedScore}`, matched.x, matched.y, '#facc15');
+                createExplosion(matched.x, matched.y);
+
+                if (combo % 5 === 0 && combo > 0) {
+                    sound.playComboStreak(combo);
+                } else {
+                    sound.playCorrect();
+                }
+
+                activeWords.splice(matchIndex, 1);
+
+                document.getElementById('displayScore').innerText = score;
+                document.getElementById('displayCombo').innerText = `${combo}x`;
+            } else {
+                combo = 0;
+                document.getElementById('displayCombo').innerText = '0x';
+                sound.playMiss();
+            }
+        }
+
+        function handleMiss() {
+            lives--;
+            combo = 0;
+            document.getElementById('displayCombo').innerText = '0x';
+            updateLivesUI();
+            sound.playMiss();
+
+            if (lives <= 0) {
+                triggerGameOver();
+            }
+        }
+
+        function createExplosion(x, y) {
+            const particleCount = 18;
+            const colors = ['#38bdf8', '#f43f5e', '#a855f7', '#facc15'];
+
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3.5 + 1;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 2.5 + 1.5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1.0,
+                    decay: Math.random() * 0.03 + 0.02
+                });
+            }
+        }
+
+        function addFloatingText(text, x, y, color) {
+            floatingTexts.push({
+                text: text,
+                x: x,
+                y: y,
+                color: color,
+                alpha: 1.0,
+                vy: -1.2
+            });
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                gameCtx.save();
+                gameCtx.globalAlpha = p.alpha;
+                gameCtx.fillStyle = p.color;
+                gameCtx.beginPath();
+                gameCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                gameCtx.fill();
+                gameCtx.restore();
+            }
+        }
+
+        function updateAndDrawFloatingTexts() {
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy;
+                ft.alpha -= 0.025;
+
+                if (ft.alpha <= 0) {
+                    floatingTexts.splice(i, 1);
+                    continue;
+                }
+
+                gameCtx.save();
+                gameCtx.globalAlpha = ft.alpha;
+                gameCtx.font = "bold 15px 'Orbitron', sans-serif";
+                gameCtx.fillStyle = ft.color;
+                gameCtx.textAlign = 'center';
+                gameCtx.fillText(ft.text, ft.x, ft.y);
+                gameCtx.restore();
+            }
+        }
+
+        function updateLivesUI() {
+            const container = document.getElementById('livesContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < maxLives; i++) {
+                const heart = document.createElement('i');
+                heart.className = i < lives ? 'fa-solid fa-heart' : 'fa-regular fa-heart text-slate-600';
+                container.appendChild(heart);
+            }
+        }
+
+        function togglePause() {
+            if (!isPlaying) return;
+            isPaused = !isPaused;
+            const pauseModal = document.getElementById('screenPause');
+            if (isPaused) {
+                pauseModal.classList.remove('hidden');
+            } else {
+                pauseModal.classList.add('hidden');
+                document.getElementById('typingInput').focus();
+            }
+        }
+
+        function returnHome() {
+            isPlaying = false;
+            isPaused = false;
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+            document.getElementById('gameHeader').classList.add('hidden');
+            document.getElementById('gameFooter').classList.add('hidden');
+            document.getElementById('screenPause').classList.add('hidden');
+            document.getElementById('screenGameOver').classList.add('hidden');
+            document.getElementById('screenLeaderboard').classList.add('hidden');
+
+            document.getElementById('screenHome').classList.remove('hidden');
+        }
+
+        function triggerGameOver() {
+            isPlaying = false;
+            sound.playGameOver();
+
+            const accuracy = totalTyped > 0 ? Math.round((correctTyped / totalTyped) * 100) : 100;
+
+            document.getElementById('finalScore').innerText = score.toLocaleString();
+            document.getElementById('finalDiff').innerText = `${currentDifficulty}단계 (${DIFF_TEXTS[currentDifficulty].split(" ")[1]})`;
+            document.getElementById('finalAccuracy').innerText = `${accuracy}%`;
+            document.getElementById('finalCombo').innerText = `${maxCombo}x`;
+
+            const isQualified = isScoreQualifiedForRank(currentDifficulty, score);
+            const submitContainer = document.getElementById('rankSubmitContainer');
+
+            if (isQualified && score > 0) {
+                submitContainer.classList.remove('hidden');
+                document.getElementById('nicknameInput').value = '';
+                setTimeout(() => document.getElementById('nicknameInput').focus(), 100);
+            } else {
+                submitContainer.classList.add('hidden');
+            }
+
+            document.getElementById('screenGameOver').classList.remove('hidden');
+        }
+
+        // --- Leaderboard Data ---
+        const RANK_STORAGE_KEY = 'korean_typing_ranks_10levels';
+
+        function getLeaderboardData() {
+            try {
+                const data = localStorage.getItem(RANK_STORAGE_KEY);
+                return data ? JSON.parse(data) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveLeaderboardData(data) {
+            try {
+                localStorage.setItem(RANK_STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {
+                showToast("기록 저장 오류 발생");
+            }
+        }
+
+        function isScoreQualifiedForRank(level, newScore) {
+            const data = getLeaderboardData();
+            const levelScores = data[level] || [];
+            if (levelScores.length < 10) return true;
+            return newScore > levelScores[levelScores.length - 1].score;
+        }
+
+        function submitScore() {
+            const nameInput = document.getElementById('nicknameInput');
+            const nickname = nameInput.value.trim() || '익명타자';
+            const accuracy = totalTyped > 0 ? Math.round((correctTyped / totalTyped) * 100) : 100;
+
+            const newRecord = {
+                id: Date.now(),
+                nickname: nickname,
+                score: score,
+                accuracy: accuracy,
+                maxCombo: maxCombo,
+                date: new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+            };
+
+            const data = getLeaderboardData();
+            if (!data[currentDifficulty]) data[currentDifficulty] = [];
+
+            data[currentDifficulty].push(newRecord);
+            data[currentDifficulty].sort((a, b) => b.score - a.score);
+            data[currentDifficulty] = data[currentDifficulty].slice(0, 10);
+
+            saveLeaderboardData(data);
+
+            document.getElementById('rankSubmitContainer').classList.add('hidden');
+            showToast("랭킹에 성공적으로 등록되었습니다!");
+        }
+
+        function openLeaderboard() {
+            document.getElementById('screenHome').classList.add('hidden');
+            document.getElementById('screenLeaderboard').classList.remove('hidden');
+
+            document.querySelectorAll('.rank-tab').forEach(t => {
+                const tabLevel = parseInt(t.getAttribute('data-tab'));
+                if (tabLevel === currentDifficulty) {
+                    t.classList.add('bg-purple-600', 'text-white', 'font-bold');
+                    t.classList.remove('text-slate-400');
+                } else {
+                    t.classList.remove('bg-purple-600', 'text-white', 'font-bold');
+                    t.classList.add('text-slate-400');
+                }
+            });
+
+            renderLeaderboardTable(currentDifficulty);
+        }
+
+        function closeLeaderboard() {
+            document.getElementById('screenLeaderboard').classList.add('hidden');
+            document.getElementById('screenHome').classList.remove('hidden');
+        }
+
+        function renderLeaderboardTable(level) {
+            const tbody = document.getElementById('leaderboardBody');
+            const noRankNotice = document.getElementById('noRankNotice');
+            tbody.innerHTML = '';
+
+            const data = getLeaderboardData();
+            const levelRanks = data[level] || [];
+
+            if (levelRanks.length === 0) {
+                noRankNotice.classList.remove('hidden');
+                return;
+            } else {
+                noRankNotice.classList.add('hidden');
+            }
+
+            levelRanks.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-purple-900/20 transition";
+
+                let rankBadge = `<span class="font-bold text-slate-400">${index + 1}</span>`;
+                if (index === 0) rankBadge = `<span class="text-yellow-400 font-extrabold"><i class="fa-solid fa-crown mr-1"></i>1</span>`;
+                else if (index === 1) rankBadge = `<span class="text-slate-300 font-extrabold"><i class="fa-solid fa-medal mr-1"></i>2</span>`;
+                else if (index === 2) rankBadge = `<span class="text-amber-600 font-extrabold"><i class="fa-solid fa-award mr-1"></i>3</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-2.5 px-2.5 font-orbitron">${rankBadge}</td>
+                    <td class="py-2.5 px-2.5 font-bold text-white">${escapeHtml(item.nickname)}</td>
+                    <td class="py-2.5 px-2.5 text-right font-orbitron text-yellow-400 font-bold">${item.score.toLocaleString()}</td>
+                    <td class="py-2.5 px-2.5 text-right hidden sm:table-cell text-purple-300">${item.accuracy}%</td>
+                    <td class="py-2.5 px-2.5 text-right hidden sm:table-cell text-pink-400 font-orbitron">${item.maxCombo}x</td>
+                    <td class="py-2.5 px-2.5 text-right text-[11px] text-slate-400">${item.date}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function clearLeaderboardData() {
+            if (confirm("정말로 모든 난이도의 랭킹 기록을 초기화하시겠습니까?")) {
+                localStorage.removeItem(RANK_STORAGE_KEY);
+                const activeTab = document.querySelector('.rank-tab.bg-purple-600');
+                const level = activeTab ? parseInt(activeTab.getAttribute('data-tab')) : 1;
+                renderLeaderboardTable(level);
+                showToast("모든 랭킹 기록이 초기화되었습니다.");
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = message;
+            toast.classList.remove('hidden');
+
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
