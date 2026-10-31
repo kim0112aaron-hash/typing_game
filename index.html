@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>한글 타자 게임 - 무한 도전</title>
+    <title>한글 타자 게임 - 무한 도전 (쉬운 초반 난이도)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -28,7 +28,6 @@
             font-family: 'Orbitron', sans-serif;
         }
 
-        /* 캔버스 배경 및 레이어 */
         #game-canvas {
             position: absolute;
             top: 0;
@@ -52,7 +51,6 @@
             pointer-events: auto;
         }
 
-        /* 네온 텍스트 효과 */
         .neon-text-blue {
             text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.4);
         }
@@ -63,7 +61,6 @@
             text-shadow: 0 0 10px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4);
         }
 
-        /* 단어 객체 애니메이션 */
         .falling-word {
             position: absolute;
             padding: 6px 16px;
@@ -76,7 +73,20 @@
             z-index: 5;
         }
 
-        /* 데미지 및 레벨업 오버레이 효과 */
+        /* 아이템 별 테두리 강조 스타일 */
+        .item-bomb { border: 2px solid #ef4444 !important; background: rgba(127, 29, 29, 0.9) !important; color: #fca5a5 !important; }
+        .item-clock { border: 2px solid #3b82f6 !important; background: rgba(30, 58, 138, 0.9) !important; color: #93c5fd !important; }
+        .item-x15 { border: 2px solid #eab308 !important; background: rgba(113, 63, 18, 0.9) !important; color: #fde047 !important; }
+        .item-x10 { border: 2px solid #a855f7 !important; background: rgba(88, 28, 135, 0.9) !important; color: #f0abfc !important; }
+
+        .item-icon {
+            position: absolute;
+            top: -12px;
+            left: -8px;
+            font-size: 1.2rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+        }
+
         @keyframes damage-flash {
             0% { background-color: rgba(239, 68, 68, 0.4); }
             100% { background-color: transparent; }
@@ -94,7 +104,6 @@
             animation: levelup-anim 1.5s ease-out forwards;
         }
 
-        /* 스크롤바 맞춤 */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -109,28 +118,27 @@
 </head>
 <body>
 
-    <!-- 캔버스 (배경 애니메이션 및 파티클) -->
     <canvas id="game-canvas"></canvas>
 
-    <!-- 게임 UI 레이어 -->
     <div id="ui-layer" class="p-4 md:p-6">
         
-        <!-- 게임 플레이 상단 헤더 -->
         <header id="game-header" class="hidden flex justify-between items-center bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-2xl p-4 interactive shadow-2xl">
             <div class="flex items-center gap-6">
-                <!-- 스테이지 표시 -->
                 <div class="flex flex-col">
                     <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">STAGE</span>
                     <span id="stage-display" class="text-2xl md:text-3xl font-extrabold text-amber-400 font-orbitron neon-text-gold">STAGE 1</span>
                 </div>
-                <!-- 타이머 (다음 단계를 위한 카운트다운) -->
                 <div class="flex flex-col border-l border-slate-700 pl-6">
                     <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">NEXT LEVEL IN</span>
                     <span id="timer-display" class="text-xl md:text-2xl font-bold text-cyan-400 font-orbitron">00:50</span>
                 </div>
+                <div id="slow-buff-display" class="hidden flex items-center gap-2 border-l border-slate-700 pl-6 text-blue-400 font-bold animate-pulse">
+                    <i class="fa-solid fa-clock"></i>
+                    <span class="text-xs">SLOW MODE</span>
+                    <span id="buff-time-text" class="font-orbitron">20s</span>
+                </div>
             </div>
 
-            <!-- 체력 하트 -->
             <div class="flex items-center gap-2">
                 <div id="hp-container" class="flex gap-1 text-2xl text-red-500">
                     <i class="fa-solid fa-heart"></i>
@@ -141,7 +149,6 @@
                 </div>
             </div>
 
-            <!-- 점수 및 콤보 -->
             <div class="flex items-center gap-6">
                 <div class="text-right">
                     <span class="text-xs text-slate-400 font-bold block">SCORE</span>
@@ -152,7 +159,6 @@
                     <span id="combo-display" class="text-xl md:text-2xl font-bold text-purple-400 font-orbitron">0x</span>
                 </div>
                 
-                <!-- 컨트롤 버튼들 -->
                 <div class="flex gap-2 border-l border-slate-700 pl-4">
                     <button id="btn-sound-toggle" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition" title="음악/효과음 토글">
                         <i id="sound-icon" class="fa-solid fa-volume-high"></i>
@@ -167,15 +173,13 @@
             </div>
         </header>
 
-        <!-- 레벨업 알림 팝업 오버레이 -->
         <div id="levelup-overlay" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none">
             <div class="levelup-popup text-center">
                 <h2 id="levelup-text" class="text-5xl md:text-7xl font-black text-amber-400 font-orbitron neon-text-gold tracking-widest">LEVEL UP!</h2>
-                <p id="levelup-subtext" class="text-xl md:text-2xl text-cyan-300 font-bold mt-2">속도가 빨라집니다!</p>
+                <p id="levelup-subtext" class="text-xl md:text-2xl text-cyan-300 font-bold mt-2">단어 난이도가 높아집니다!</p>
             </div>
         </div>
 
-        <!-- 단어 떨어지는 영역 -->
         <div id="game-area" class="relative flex-1 my-4 overflow-hidden">
             <div id="danger-line" class="hidden absolute bottom-4 left-0 right-0 border-b-2 border-dashed border-red-500/50 flex justify-between px-4 text-xs text-red-500/70">
                 <span>DANGER ZONE</span>
@@ -183,7 +187,6 @@
             </div>
         </div>
 
-        <!-- 하단 입력창 -->
         <footer id="game-footer" class="hidden interactive max-w-xl w-full mx-auto mb-4">
             <div class="relative flex items-center">
                 <input type="text" id="word-input" autocomplete="off" placeholder="단어를 입력하고 Enter를 누르세요..." 
@@ -198,22 +201,23 @@
             <div>
                 <span class="text-xs font-bold uppercase tracking-widest text-cyan-400">Korean Typing Game</span>
                 <h1 class="text-4xl font-black text-white mt-1 font-orbitron neon-text-blue">한글 타자 무한 도전</h1>
-                <p class="text-slate-400 text-sm mt-2">50초마다 1단계씩 상승하는 30단계의 한계에 도전하세요!</p>
+                <p class="text-slate-400 text-sm mt-2">초반엔 쉬운 낱말부터 편안하게 시작하세요!</p>
             </div>
 
-            <!-- 게임 설명 유닛 -->
             <div class="bg-slate-800/60 rounded-2xl p-4 text-left text-xs text-slate-300 space-y-2 border border-slate-700/50">
                 <div class="flex items-center gap-2 text-amber-400 font-bold">
-                    <i class="fa-solid fa-clock"></i> 50초마다 난이도 & 배경 전환
+                    <i class="fa-solid fa-seedling"></i> 여유로워진 초반 난이도
                 </div>
-                <p>1단계부터 30단계까지 단어 길이와 속도가 점점 빠르게 상승하며 배경이 화려하게 변화합니다.</p>
+                <p>1~5단계는 1~2자 기초 단어로 천천히 떨어지며 50초마다 난이도가 올라갑니다.</p>
                 <div class="flex items-center gap-2 text-cyan-400 font-bold pt-1">
-                    <i class="fa-solid fa-skull"></i> 31단계 Final Boss Stage
+                    <i class="fa-solid fa-cubes"></i> 4가지 특수 아이템
                 </div>
-                <p>30번을 모두 버텨내면 극악의 한계 난이도가 기다립니다!</p>
+                <p>💣 <b>폭탄(2.5%)</b>: 화면 단어 전체 제거 & 점수 3배</p>
+                <p>⏰ <b>시계(1.5%)</b>: 20초간 0.5배속 감속 & 점수 0.5배</p>
+                <p>✨ <b>X1.5(0.75%)</b>: 전체 누적 점수 1.5배 상승</p>
+                <p>💎 <b>X10(0.1%)</b>: 전체 누적 점수 10배 폭발 상승</p>
             </div>
 
-            <!-- 볼륨 및 기본 설정 -->
             <div class="space-y-3 text-left">
                 <label class="text-xs text-slate-400 font-bold block">음량 설정 (Volume)</label>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" class="w-full accent-cyan-500">
@@ -258,7 +262,6 @@
                 <p class="text-slate-400 text-sm mt-1">도전이 종료되었습니다!</p>
             </div>
 
-            <!-- 최종 요약 통계 -->
             <div class="grid grid-cols-2 gap-3 text-left">
                 <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
                     <span class="text-xs text-slate-400 block">도달 단계</span>
@@ -278,7 +281,6 @@
                 </div>
             </div>
 
-            <!-- 랭킹 등록 영역 -->
             <div id="rank-input-area" class="space-y-3 pt-2 border-t border-slate-800">
                 <span class="text-xs text-slate-300 font-bold block">🎉 랭킹 등록 (Top 10 진입!)</span>
                 <div class="flex gap-2">
@@ -320,45 +322,79 @@
                         </tr>
                     </thead>
                     <tbody id="rank-table-body">
-                        <!-- 스크립트로 랭킹 동적 생성 -->
                     </tbody>
                 </table>
             </div>
 
-            <div class="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center">
-                <button id="btn-clear-rank" class="text-xs text-red-400 hover:underline">랭킹 초기화</button>
+            <div class="mt-4 pt-4 border-t border-slate-800 flex justify-end items-center">
                 <button id="btn-back-rank" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl text-sm font-bold">닫기</button>
             </div>
         </div>
     </div>
 
     <script>
-        /* ==========================================================================
-           1. 단어 데이터 베이스 (단계별 난이도 상승 데이터)
-           ========================================================================== */
-        const WORD_DATABASE = {
-            easy: [
-                '가', '나', '다', '하', '산', '물', '불', '달', '별', '해', '꿈', '봄', '눈', '길', '집',
-                '하늘', '바다', '구름', '나무', '꽃잎', '강물', '노을', '바람', '소리', '아이', '친구', '사랑', '행복', '미소', '기쁨'
-            ],
-            medium: [
-                '컴퓨터', '비행기', '무지개', '자전거', '도서관', '모험가', '밀키웨이', '은하수', '대한민국', '우주탐사', '인공지능', '프로그래머',
-                '고진감래', '대기만성', '동문서답', '유명무실', '사필귀정', '어부지리', '초지일관', '역지사지', '일석이조', '단도직입'
-            ],
-            hard: [
-                '돌다리도 두들겨라', '가는 말이 고와야 오는 말이 곱다', '티끌 모아 태산이다', '아는 것이 힘이다', '고생 끝에 즐거움이 온다',
-                '개천에서 용 난다', '지성이면 감천이다', '뛰는 놈 위에 나는 놈 있다', '원숭이도 나무에서 떨어진다', '우물 안 개구리'
-            ],
-            extreme: [
-                '천 리 길도 한 걸음부터 시작되는 법이다', '실패는 성공의 어머니라는 사실을 잊지 마라',
-                '빛이 강할수록 그림자도 깊어지는 법이다', '시작이 반이라는 말처럼 지금 실행하라',
-                '고통 없이 얻을 수 있는 가치 있는 것은 없다'
-            ]
-        };
+        class WordEngine {
+            constructor() {
+                // 1~5단계용 순수 1~2자 초급 기초 단어장
+                this.easyLvl1 = ['산', '물', '불', '달', '별', '해', '꿈', '봄', '눈', '길', '집', '샘', '숲', '빛', '흙', '바다', '하늘', '구름', '나무', '꽃잎', '강물', '노을', '바람', '소리', '아이', '친구', '사랑', '행복', '미소', '기쁨', '마음', '신발', '연필', '시계', '우산', '비누', '거울', '모자', '의자', '책상', '가방', '안경', '지우개', '바나나', '사과', '포도', '수박', '토끼', '호랑이', '사자', '기린', '코끼리', '강아지', '고양이', '새싹', '연못'];
+                
+                this.baseLvl2 = ['컴퓨터', '비행기', '무지개', '자전거', '도서관', '모험가', '은하수', '대한민국', '우주탐사', '인공지능', '프로그래머', '스마트폰', '자동차', '해바라기', '선풍기', '텔레비전', '냉장고', '세탁기', '청소기', '다이어리', '크리스마스', '알고리즘', '데이터베이스', '네트워크', '소프트웨어', '하드웨어', '인터넷', '디지털', '패러다임', '블록체인', '사이언스', '엔지니어링', '아키텍처', '그래픽스', '마이크로폰', '시뮬레이션'];
+                this.baseLvl3 = ['고진감래', '대기만성', '동문서답', '유명무실', '사필귀정', '어부지리', '초지일관', '역지사지', '일석이조', '단도직입', '자수성가', '청출어람', '천고마비', '동고동락', '유유상종', '온고지신', '감탄고토', '선공후사', '백발백중', '격세지감', '고립무원', '군계일학', '금상첨화', '동병상련', '명경지수', '물심양면', '박학다식', '부귀공명', '삼고초려', '심심상인', '주객전도', '전화위복', '천방지축', '청천벽력', '탁상공론'];
+                this.baseLvl4 = ['돌다리도 두들겨라', '가는 말이 고와야 온다', '티끌 모아 태산이다', '아는 것이 힘이다', '고생 끝에 즐거움이 온다', '개천에서 용 난다', '지성이면 감천이다', '뛰는 놈 위에 나는 놈 있다', '원숭이도 나무에서 떨어진다', '우물 안 개구리', '금강산도 식후경', '소 잃고 외양간 고친다', '등잔 밑이 어둡다', '바늘 도둑이 소 도둑 된다', '백지장도 맞들면 낫다', '낫 놓고 기역 자도 모른다', '쇠뿔도 단김에 빼라', '천 리 길도 한 걸음부터', '공든 탑이 무너지랴', '하나를 보면 열을 안다'];
+                this.baseLvl5 = [
+                    '천 리 길도 한 걸음부터 시작되는 법이다',
+                    '실패는 성공의 어머니라는 사실을 결코 잊지 마라',
+                    '빛이 강할수록 그림자도 깊어지는 법이다',
+                    '시작이 반이라는 말처럼 지금 당장 실행하라',
+                    '고통 없이 얻을 수 있는 가치 있는 것은 없다',
+                    '배움에는 끝이 없으니 항상 겸손한 자세를 유지하라',
+                    '오늘 할 일을 내일로 미루지 않는 습관을 가지자',
+                    '인생은 타이밍이라는 말처럼 기회를 놓치지 마라',
+                    '꾸준한 노력이 결국 위대한 결과를 만들어낸다',
+                    '자신을 믿는 것이 성공으로 가는 첫 번째 비결이다'
+                ];
 
-        /* ==========================================================================
-           2. 오디오 신디사이저 엔진 (Web Audio API)
-           ========================================================================== */
+                this.generatedWordsLvl2 = [];
+                this.generatedWordsLvl3 = [];
+                
+                this.generateMassiveWords();
+            }
+
+            generateMassiveWords() {
+                const prefix = ['푸른', '맑은', '밝은', '높은', '깊은', '예쁜', '멋진', '신비한', '빛나는', '작은', '거대한', '빠른', '느린', '고요한', '화려한', '찬란한', '따뜻한', '시원한', '슬기로운', '지혜로운'];
+                const nouns = ['호수', '바람', '노을', '기억', '추억', '소리', '파도', '미소', '마음', '세계', '공간', '시간', '계절', '여행', '이야기', '조각', '풍경', '느낌', '선율', '울림', '희망', '미래'];
+                const suffixes = ['상상', '탐험', '연구', '분석', '개발', '창작', '디자인', '시스템', '프로젝트', '플랫폼', '엔진', '모듈', '네트워크', '데이터'];
+
+                nouns.forEach(n => {
+                    suffixes.forEach(s => {
+                        this.generatedWordsLvl2.push(`${n} ${s}`);
+                        this.generatedWordsLvl3.push(`디지털 ${n} ${s}`);
+                    });
+                });
+            }
+
+            getWordForStage(stage) {
+                let pool = [];
+
+                if (stage <= 5) {
+                    // 1~5단계: 오직 1~2글자 쉬운 기초 단어만 출제
+                    pool = this.easyLvl1;
+                } else if (stage <= 12) {
+                    pool = this.easyLvl1.concat(this.baseLvl2).concat(this.generatedWordsLvl2.slice(0, 500));
+                } else if (stage <= 20) {
+                    pool = this.baseLvl2.concat(this.baseLvl3).concat(this.generatedWordsLvl3.slice(0, 1000));
+                } else if (stage <= 29) {
+                    pool = this.baseLvl3.concat(this.baseLvl4);
+                } else {
+                    pool = this.baseLvl4.concat(this.baseLvl5);
+                }
+
+                return pool[Math.floor(Math.random() * pool.length)];
+            }
+        }
+
+        const wordEngine = new WordEngine();
+
         class SoundEngine {
             constructor() {
                 this.ctx = null;
@@ -392,7 +428,7 @@
             playPop() {
                 if (this.isMuted || !this.ctx) return;
                 const now = this.ctx.currentTime;
-                const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                const freqs = [523.25, 659.25, 783.99, 1046.50];
                 
                 freqs.forEach((f, i) => {
                     const osc = this.ctx.createOscillator();
@@ -406,6 +442,24 @@
                     osc.start(now + i * 0.03);
                     osc.stop(now + i * 0.03 + 0.1);
                 });
+            }
+
+            playBomb() {
+                if (this.isMuted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.5);
+                gain.gain.setValueAtTime(0.4 * this.masterVolume, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.5);
             }
 
             playError() {
@@ -429,7 +483,7 @@
             playLevelUp() {
                 if (this.isMuted || !this.ctx) return;
                 const now = this.ctx.currentTime;
-                const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+                const notes = [440, 554.37, 659.25, 880];
                 notes.forEach((f, i) => {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
@@ -465,9 +519,6 @@
 
         const soundEngine = new SoundEngine();
 
-        /* ==========================================================================
-           3. 배경 다이내믹 캔버스 애니메이션
-           ========================================================================== */
         class BackgroundCanvas {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -504,22 +555,17 @@
             }
 
             render() {
-                // 단계별 배경 그라데이션 변화
                 let grad = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
                 if (this.stage <= 10) {
-                    // Deep Cosmic Blue
                     grad.addColorStop(0, '#050714');
                     grad.addColorStop(1, '#0b112c');
                 } else if (this.stage <= 20) {
-                    // Aurora Purple
                     grad.addColorStop(0, '#0f051d');
                     grad.addColorStop(1, '#1e0b36');
                 } else if (this.stage <= 30) {
-                    // Inferno Red / Dark Orange
                     grad.addColorStop(0, '#1a0505');
                     grad.addColorStop(1, '#360b0b');
                 } else {
-                    // Stage 31 Final Hell Mode
                     grad.addColorStop(0, '#2b0000');
                     grad.addColorStop(1, '#050000');
                 }
@@ -527,7 +573,6 @@
                 this.ctx.fillStyle = grad;
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-                // 파티클 업데이트 및 렌더링
                 this.ctx.fillStyle = '#ffffff';
                 this.particles.forEach(p => {
                     p.y += p.vy * (1 + this.stage * 0.03);
@@ -551,9 +596,6 @@
         const bgCanvas = new BackgroundCanvas('game-canvas');
         bgCanvas.render();
 
-        /* ==========================================================================
-           4. 핵심 게임 메커니즘 & 상태 관리
-           ========================================================================== */
         class TypingGame {
             constructor() {
                 this.stage = 1;
@@ -566,17 +608,15 @@
                 this.isRunning = false;
                 this.isPaused = false;
                 
-                // 타이머 관련 (50초 스테이지 업)
                 this.stageTimerSeconds = 50;
                 this.totalSurvivedSeconds = 0;
-                this.stageInterval = null;
                 this.secondInterval = null;
 
-                // 스폰 제어
+                this.slowModeSeconds = 0;
+
                 this.spawnTimer = 0;
                 this.lastFrameTime = 0;
 
-                // DOM 요소 참조
                 this.dom = {
                     modalHome: document.getElementById('modal-home'),
                     modalPause: document.getElementById('modal-pause'),
@@ -599,7 +639,9 @@
                     finalScore: document.getElementById('final-score'),
                     finalCombo: document.getElementById('final-combo'),
                     rankTableBody: document.getElementById('rank-table-body'),
-                    rankInputArea: document.getElementById('rank-input-area')
+                    rankInputArea: document.getElementById('rank-input-area'),
+                    slowBuffDisplay: document.getElementById('slow-buff-display'),
+                    buffTimeText: document.getElementById('buff-time-text')
                 };
 
                 this.bindEvents();
@@ -617,10 +659,8 @@
                 document.getElementById('btn-show-rank').addEventListener('click', () => this.showRank());
                 document.getElementById('btn-close-rank').addEventListener('click', () => this.hideRank());
                 document.getElementById('btn-back-rank').addEventListener('click', () => this.hideRank());
-                document.getElementById('btn-clear-rank').addEventListener('click', () => this.clearRankData());
                 document.getElementById('btn-save-rank').addEventListener('click', () => this.saveRankRecord());
 
-                // 음량 조절
                 const volSlider = document.getElementById('volume-slider');
                 volSlider.addEventListener('input', (e) => {
                     soundEngine.masterVolume = parseFloat(e.target.value);
@@ -631,7 +671,6 @@
                     document.getElementById('sound-icon').className = soundEngine.isMuted ? 'fa-solid fa-volume-xmark text-red-400' : 'fa-solid fa-volume-high';
                 });
 
-                // 단어 입력 키 감지
                 this.dom.wordInput.addEventListener('input', () => soundEngine.playKeypress());
                 this.dom.wordInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
@@ -640,7 +679,6 @@
                     }
                 });
 
-                // ESC 키로 일시정지 토글
                 window.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape' && this.isRunning) {
                         if (this.isPaused) this.resume();
@@ -658,6 +696,7 @@
                 this.hp = this.maxHp;
                 this.stageTimerSeconds = 50;
                 this.totalSurvivedSeconds = 0;
+                this.slowModeSeconds = 0;
                 this.words.forEach(w => w.el.remove());
                 this.words = [];
                 this.isRunning = true;
@@ -666,7 +705,6 @@
                 bgCanvas.setStage(this.stage);
                 this.updateUI();
 
-                // 모달 닫기 및 UI 표시
                 this.dom.modalHome.classList.add('hidden');
                 this.dom.modalPause.classList.add('hidden');
                 this.dom.modalGameover.classList.add('hidden');
@@ -678,7 +716,6 @@
 
                 this.dom.wordInput.focus();
 
-                // 타이머 시작
                 clearInterval(this.secondInterval);
                 this.secondInterval = setInterval(() => this.tickSecond(), 1000);
 
@@ -692,6 +729,10 @@
                 this.totalSurvivedSeconds++;
                 this.stageTimerSeconds--;
 
+                if (this.slowModeSeconds > 0) {
+                    this.slowModeSeconds--;
+                }
+
                 if (this.stageTimerSeconds <= 0) {
                     this.stageUp();
                 }
@@ -700,7 +741,6 @@
             }
 
             stageUp() {
-                // 최대 30단계 후 31단계 Final 진입
                 if (this.stage < 31) {
                     this.stage++;
                 }
@@ -708,7 +748,6 @@
                 bgCanvas.setStage(this.stage);
                 soundEngine.playLevelUp();
 
-                // 레벨업 팝업 연출
                 this.dom.levelupOverlay.classList.remove('hidden');
                 if (this.stage === 31) {
                     this.dom.levelupText.innerText = "FINAL BOSS STAGE!";
@@ -761,25 +800,26 @@
                 const dt = (timestamp - this.lastFrameTime) / 1000;
                 this.lastFrameTime = timestamp;
 
-                // 단어 스폰 로직 (단계가 올라갈수록 생성 주기가 짧아짐)
                 this.spawnTimer += dt;
-                const spawnInterval = Math.max(0.7, 3.0 - (this.stage * 0.08));
+                // ★ 초반 스폰 주기 완화: 1~5단계는 3.5초 간격으로 유기적으로 스폰
+                const spawnInterval = Math.max(0.8, 3.5 - (this.stage * 0.08));
                 
                 if (this.spawnTimer >= spawnInterval) {
                     this.spawnWord();
                     this.spawnTimer = 0;
                 }
 
-                // 단어 낙하 이동 및 바닥 충돌 검사
                 const gameAreaHeight = this.dom.gameArea.clientHeight;
-                const baseSpeed = 40 + (this.stage * 8); // 단계별 속도 증가
+                
+                const speedMultiplier = this.slowModeSeconds > 0 ? 0.5 : 1.0;
+                // ★ 초반 낙하 속도 추가 완화: 1단계 기준 25px/s 부드럽게 낙하
+                const baseSpeed = (25 + (this.stage * 5.5)) * 0.9 * speedMultiplier;
 
                 for (let i = this.words.length - 1; i >= 0; i--) {
                     const w = this.words[i];
                     w.y += baseSpeed * dt;
                     w.el.style.top = `${w.y}px`;
 
-                    // 바닥 충돌 처리
                     if (w.y >= gameAreaHeight - 30) {
                         w.el.remove();
                         this.words.splice(i, 1);
@@ -790,40 +830,50 @@
                 requestAnimationFrame((t) => this.gameLoop(t));
             }
 
-            getRandomWord() {
-                let pool = WORD_DATABASE.easy;
-                if (this.stage >= 6 && this.stage <= 15) {
-                    pool = WORD_DATABASE.easy.concat(WORD_DATABASE.medium);
-                } else if (this.stage >= 16 && this.stage <= 30) {
-                    pool = WORD_DATABASE.medium.concat(WORD_DATABASE.hard);
-                } else if (this.stage >= 31) {
-                    pool = WORD_DATABASE.hard.concat(WORD_DATABASE.extreme);
-                }
-
-                return pool[Math.floor(Math.random() * pool.length)];
-            }
-
             spawnWord() {
-                const wordText = this.getRandomWord();
+                const wordText = wordEngine.getWordForStage(this.stage);
                 const el = document.createElement('div');
                 el.className = 'falling-word bg-slate-800/90 border border-cyan-500/40 text-cyan-200';
-                el.innerText = wordText;
+                
+                const rand = Math.random() * 100;
+                let itemType = null;
+                let iconHtml = '';
+
+                if (rand < 2.5) {
+                    itemType = 'bomb';
+                    iconHtml = '<span class="item-icon">💣</span>';
+                    el.classList.add('item-bomb');
+                } else if (rand < 2.5 + 1.5) {
+                    itemType = 'clock';
+                    iconHtml = '<span class="item-icon">⏰</span>';
+                    el.classList.add('item-clock');
+                } else if (rand < 2.5 + 1.5 + 0.75) {
+                    itemType = 'x15';
+                    iconHtml = '<span class="item-icon">✨</span>';
+                    el.classList.add('item-x15');
+                } else if (rand < 2.5 + 1.5 + 0.75 + 0.1) {
+                    itemType = 'x10';
+                    iconHtml = '<span class="item-icon">💎</span>';
+                    el.classList.add('item-x10');
+                }
+
+                el.innerHTML = `${iconHtml}${wordText}`;
 
                 const areaWidth = this.dom.gameArea.clientWidth;
-                const posX = Math.random() * (areaWidth - 160) + 80;
+                const padding = Math.min(220, wordText.length * 12 + 40);
+                const posX = Math.random() * (areaWidth - padding * 2) + padding;
                 
                 el.style.left = `${posX}px`;
                 el.style.top = `0px`;
 
                 this.dom.gameArea.appendChild(el);
-                this.words.push({ text: wordText, x: posX, y: 0, el: el });
+                this.words.push({ text: wordText, itemType: itemType, x: posX, y: 0, el: el });
             }
 
             checkWordMatch(inputText) {
                 if (!inputText) return;
 
                 let matchedIndex = -1;
-                // 가장 아래쪽에 내려와 있는 단어부터 우선적으로 매칭
                 let maxY = -1;
 
                 for (let i = 0; i < this.words.length; i++) {
@@ -836,7 +886,6 @@
                 }
 
                 if (matchedIndex !== -1) {
-                    // 성공
                     const w = this.words[matchedIndex];
                     w.el.remove();
                     this.words.splice(matchedIndex, 1);
@@ -844,17 +893,43 @@
                     this.combo++;
                     if (this.combo > this.maxCombo) this.maxCombo = this.combo;
                     
-                    const points = 100 + (this.combo * 10) + (this.stage * 20);
-                    this.score += points;
-                    
-                    soundEngine.playPop();
+                    let wordPoints = 100 + (this.combo * 10) + (this.stage * 20);
+
+                    if (w.itemType === 'bomb') {
+                        this.score += Math.round(wordPoints * 3);
+                        soundEngine.playBomb();
+                        this.triggerBombEffect();
+                    } else if (w.itemType === 'clock') {
+                        this.score += Math.round(wordPoints * 0.5);
+                        this.slowModeSeconds = 20;
+                        soundEngine.playPop();
+                    } else if (w.itemType === 'x15') {
+                        this.score += wordPoints;
+                        this.score = Math.round(this.score * 1.5);
+                        soundEngine.playPop();
+                    } else if (w.itemType === 'x10') {
+                        this.score += wordPoints;
+                        this.score = Math.round(this.score * 10);
+                        soundEngine.playPop();
+                    } else {
+                        this.score += wordPoints;
+                        soundEngine.playPop();
+                    }
+
                     this.updateUI();
                 } else {
-                    // 오타 오답
                     this.combo = 0;
                     soundEngine.playError();
                     this.updateUI();
                 }
+            }
+
+            triggerBombEffect() {
+                document.body.classList.add('damage-effect');
+                setTimeout(() => document.body.classList.remove('damage-effect'), 300);
+
+                this.words.forEach(w => w.el.remove());
+                this.words = [];
             }
 
             takeDamage() {
@@ -862,7 +937,6 @@
                 this.combo = 0;
                 soundEngine.playError();
 
-                // 화면 붉은 깜빡임 연출
                 document.body.classList.add('damage-effect');
                 setTimeout(() => document.body.classList.remove('damage-effect'), 300);
 
@@ -878,7 +952,6 @@
                 this.dom.scoreDisplay.innerText = this.score.toLocaleString();
                 this.dom.comboDisplay.innerText = `${this.combo}x`;
 
-                // 체력 하트 UI 업데이트
                 let heartsHtml = '';
                 for (let i = 0; i < this.maxHp; i++) {
                     if (i < this.hp) {
@@ -894,6 +967,13 @@
                 const m = Math.floor(this.stageTimerSeconds / 60).toString().padStart(2, '0');
                 const s = (this.stageTimerSeconds % 60).toString().padStart(2, '0');
                 this.dom.timerDisplay.innerText = `${m}:${s}`;
+
+                if (this.slowModeSeconds > 0) {
+                    this.dom.slowBuffDisplay.classList.remove('hidden');
+                    this.dom.buffTimeText.innerText = `${this.slowModeSeconds}s`;
+                } else {
+                    this.dom.slowBuffDisplay.classList.add('hidden');
+                }
             }
 
             gameOver() {
@@ -901,7 +981,6 @@
                 clearInterval(this.secondInterval);
                 soundEngine.playGameOver();
 
-                // 최종 요약 수치 입력
                 const min = Math.floor(this.totalSurvivedSeconds / 60).toString().padStart(2, '0');
                 const sec = (this.totalSurvivedSeconds % 60).toString().padStart(2, '0');
 
@@ -910,7 +989,6 @@
                 this.dom.finalScore.innerText = this.score.toLocaleString();
                 this.dom.finalCombo.innerText = `${this.maxCombo}x`;
 
-                // 랭킹 등록 자격 판단 (Top 10 진입 여부)
                 const ranks = this.getRankData();
                 const isTop = ranks.length < 10 || this.score > (ranks[ranks.length - 1]?.score || 0);
 
@@ -923,9 +1001,6 @@
                 this.dom.modalGameover.classList.remove('hidden');
             }
 
-            /* ==========================================================================
-               5. 랭킹 시스템 (LocalStorage)
-               ========================================================================== */
             getRankData() {
                 const data = localStorage.getItem('korean_typing_ranks');
                 return data ? JSON.parse(data) : [];
@@ -944,7 +1019,6 @@
                     date: new Date().toLocaleDateString('ko-KR')
                 });
 
-                // 점수 내림차순 정렬 후 Top 10 보관
                 ranks.sort((a, b) => b.score - a.score);
                 const top10 = ranks.slice(0, 10);
 
@@ -980,16 +1054,8 @@
             hideRank() {
                 this.dom.modalRank.classList.add('hidden');
             }
-
-            clearRankData() {
-                if (confirm('모든 랭킹 기록을 초기화하시겠습니까?')) {
-                    localStorage.removeItem('korean_typing_ranks');
-                    this.showRank();
-                }
-            }
         }
 
-        // 게임 인스턴스 생성
         const game = new TypingGame();
     </script>
 </body>
